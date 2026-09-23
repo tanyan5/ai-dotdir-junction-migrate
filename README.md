@@ -105,7 +105,11 @@ powershell -ExecutionPolicy Bypass -File scripts\junction_rollback.ps1 -SourceDi
 
 ## 安全须知（重要）
 
-- **绝不要用 `rmdir /s` 或 `Remove-Item -Recurse` 删除 junction**——那会顺着链接把另一块盘上的**真实数据一起删掉**。删链接只用 `cmd /c rmdir "<路径>"`（不带 `/s`），或直接用本仓库的 `junction_rollback.ps1`。
+- **绝不要用 `rmdir /s` 或 `Remove-Item -Recurse` 删除 junction**——那会顺着链接把另一块盘上的**真实数据一起删掉**。删链接只用**非递归**的方式（二选一）：
+  ```powershell
+  [IO.Directory]::Delete("<junction 路径>", $false)   # 纯 PowerShell，只删重解析点
+  ```
+  或者直接用本仓库的 `junction_rollback.ps1`（会删链接 → 拷回数据 → 校验，一条龙）。
 - 目标盘必须是**固定内置磁盘**，不要用 U 盘/可移动磁盘（拔盘即断链）。
 - 迁移前**完全退出**目标应用（含托盘图标），否则文件被占用。
 - 不要对 `.ssh` 这类安全敏感目录做 junction。
