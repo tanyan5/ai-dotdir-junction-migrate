@@ -175,8 +175,9 @@ if ($probe) {
 Write-Host "DONE. Start the application and confirm everything works." -ForegroundColor Green
 Write-Host ""
 Write-Host "IMPORTANT - do NOT delete this junction with 'rmdir /s' or 'Remove-Item -Recurse'" -ForegroundColor Yellow
-Write-Host "  (that would delete the real data on the target disk). To roll back:" -ForegroundColor Yellow
-Write-Host ("    cmd /c rmdir `"$src`"        # removes only the link" ) -ForegroundColor Yellow
-Write-Host ("    Move-Item `"$dst\*`" `"$src\`"   # restore to original location") -ForegroundColor Yellow
+Write-Host "  (that would delete the real data on the target disk). To roll back safely," -ForegroundColor Yellow
+Write-Host "  use the bundled script:" -ForegroundColor Yellow
+Write-Host ("    powershell -ExecutionPolicy Bypass -File `"$PSScriptRoot\junction_rollback.ps1`" -SourceDir `"$src`"") -ForegroundColor Yellow
+Write-Host "  (it removes only the link, copies the data back, then verifies)" -ForegroundColor Yellow
 
 exit 0
