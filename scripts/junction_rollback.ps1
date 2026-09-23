@@ -13,8 +13,11 @@
       2. Read the junction target. If -TargetDir is not given, use the junction's
          own target (single source of truth).
       3. Confirm the target holds a real directory with data.
-      4. Remove ONLY the link: cmd /c rmdir "<source>"  (no /s!).
-         This never deletes the data on the target disk.
+      4. Remove ONLY the link, in pure PowerShell:
+         [IO.Directory]::Delete("<source>", $false)  (non-recursive).
+         This removes the reparse point itself and never descends into the
+         target, so the data on the other disk is never touched. No cmd.exe
+         dependency, so this also works where cmd is unavailable/blocked.
       5. Copy the data from target BACK to the original path with robocopy /E
          (long-path safe). Transient lock files (.port/.lock/.pid) are not on the
          target and are recreated by the app, so nothing is lost.
@@ -22,10 +25,10 @@
       7. If -DeleteTarget: after verification, wipe the target dir and rmdir it.
          If omitted, the D: copy is kept as a free safety backup.
 
-    SAFETY: at no point does this script use "rmdir /s" or
-    "Remove-Item -Recurse" on the junction - those would destroy the real data.
-    The restore is two-phase (copy back -> verify -> wipe target) so the data
-    is never lost even if something fails mid-way.
+    SAFETY: at no point does this script recurse into the junction - neither
+    "rmdir /s" nor "Remove-Item -Recurse" is ever used on it, because either
+    would destroy the real data. The restore is two-phase (copy back -> verify
+    -> wipe target) so the data is never lost even if something fails mid-way.
 
 .PARAMETER SourceDir
     The original junction path (same value you passed as -SourceDir to the
@@ -206,10 +209,19 @@ $dstFiles = Get-ChildItem $dst -Recurse -File -ErrorAction SilentlyContinue
 if ($dstFiles.Count -eq 0) { Write-Host "WARNING: target $dst appears empty - restore will produce an empty directory." -ForegroundColor Yellow }
 Write-Host ("Junction: $src  ->  $dst   ({0} files on target)" -f $dstFiles.Count) -ForegroundColor Cyan
 
-# 4. Remove ONLY the link (never /s - that would delete the real data)
-Write-Host "Removing junction link only (cmd /c rmdir, no /s)..." -ForegroundColor Cyan
-cmd /c rmdir "$src" | Out-Null
-if (Test-Path $src) { Fail "Failed to remove junction: $src still exists. Do NOT use Remove-Item -Recurse here." }
+# 4. Remove ONLY the link, in pure PowerShell (no cmd.exe, no /s, no recursion).
+#    [IO.Directory]::Delete(<path>, $false) removes the reparse point itself and
+#    never descends into the target, so the real data on the other disk is safe.
+Write-Host "Removing junction link only (non-recursive .NET delete; target untouched)..." -ForegroundColor Cyan
+try { [System.IO.Directory]::Delete($src, $false) } catch { }
+if (Test-Path $src) {
+    try { (Get-Item $src -Force).Delete() } catch { }
+}
+if (Test-Path $src) {
+    Fail ("Failed to remove junction: $src still exists. Do NOT use Remove-Item -Recurse or rmdir /s - either would erase the real data on $dst.")
+}
+# Belt and braces: the data on the other disk must still be there.
+if (-not (Test-Path $dst)) { Fail "Junction link removed but target $dst is missing - stopping here. Investigate before doing anything else." }
 Write-Host "Junction removed. Original path is now gone (data still safe on target)." -ForegroundColor Green
 
 # 5. Restore data to the original path (two-phase: copy back first)
