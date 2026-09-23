@@ -155,7 +155,7 @@ powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/junction_migrate.p
 ```
 
 ### One-shot migration of all AI tool dirs
-`scripts/migrate_all_ai_dirs.ps1` bundles the common set (home dot-dirs
+`scripts/dotdir-migraterate_all_ai_dirs.ps1` bundles the common set (home dot-dirs
 `.qoder-cn .qoder .WebStorm .trae .trae-cn .tabnine` + AppData caches
 `Roaming\Trae`, `Roaming\Trae CN`, `Roaming\Qoder`, `Local\JetBrains`) into one
 run. Target layout: `D:\tool_tem\<appname>\<original-name>` (e.g.
@@ -166,9 +166,9 @@ Cursor's `globalStorage` is migrated separately and is intentionally excluded
 here to avoid disturbing that existing junction.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1"
 # or choose another root disk:
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1" -TargetRoot "E:\tool_tem"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1" -TargetRoot "E:\tool_tem"
 ```
 
 ### Selecting which items to migrate (interactive or pre-set)
@@ -191,13 +191,13 @@ instead of a migrate selection):
 
 ```powershell
 # Interactive: you pick items from the numbered list
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1"
 # Pick by index (note: already-migrated items are auto-skipped -> safe to include)
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1" -Items "1,3,7-10"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1" -Items "1,3,7-10"
 # Pick by directory name
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1" -Items "qoder-cn,trae"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1" -Items "qoder-cn,trae"
 # Non-interactive rollback of specific items (only already-migrated ones)
-powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/migrate_all_ai_dirs.ps1" -Restore -Items "3,5"
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/dotdir-migraterate_all_ai_dirs.ps1" -Restore -Items "3,5"
 ```
 
 Rules of thumb for choosing what to migrate:
@@ -211,20 +211,20 @@ Rules of thumb for choosing what to migrate:
 - Always verify the app still works after migrating before deleting the junction.
 - The same "do not rmdir /s the junction" warning applies to every junction.
 
-## Shortcut: a short slash alias (e.g. `/mig`)
+## Shortcut: a short slash alias (e.g. `/dotdir-migrate`)
 Agents on the Agent Skills standard let you type `/` in chat and search skills by
 name, so `/ai-dotdir-junction-migrate` already invokes this skill. For a shorter
 trigger, add a tiny **alias skill**: a folder whose NAME is the shortcut, holding
 only a pointer back here.
 
 ```markdown
-<!-- ~/.cursor/skills/mig/SKILL.md  — folder name == frontmatter `name` == the slash command -->
+<!-- ~/.cursor/skills/dotdir-migrate/SKILL.md  — folder name == frontmatter `name` == the slash command -->
 ---
-name: mig
+name: dotdir-migrate
 description: Shortcut alias for ai-dotdir-junction-migrate (Windows C: space reclaim via junctions).
 disable-model-invocation: true   # behaves like a slash command: never auto-loaded, costs no context
 ---
-# /mig
+# /dotdir-migrate
 Read and follow the `ai-dotdir-junction-migrate` SKILL.md, then execute its
 scan -> pick -> migrate -> verify workflow. Never improvise from memory.
 ```
@@ -233,7 +233,7 @@ Rules that bite if ignored:
 - `name` MUST equal the parent folder name, and may contain only lowercase
   letters, digits and hyphens — no Chinese, no underscores, no spaces.
 - `disable-model-invocation: true` is what makes it a pure command (only loads
-  when you type `/mig`); drop it and the alias competes for automatic matches.
+  when you type `/dotdir-migrate`); drop it and the alias competes for automatic matches.
 - Per-tool path for the alias file: Cursor `~/.cursor/skills/<alias>/SKILL.md`
   (or `~/.agents/skills/<alias>/`), Claude Code `~/.claude/commands/<alias>.md`,
   Codex CLI `~/.codex/prompts/<alias>.md`, Gemini CLI
