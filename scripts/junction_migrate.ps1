@@ -47,7 +47,7 @@ $ErrorActionPreference = 'Stop'
 
 function Fail($m) {
     Write-Host "ERROR: $m" -ForegroundColor Red
-    exit 1
+    throw $m
 }
 
 # 0. Basic sanity checks
@@ -59,7 +59,7 @@ if ($src.TrimEnd('\') -in @('C:\','C:',"$env:USERPROFILE")) { Fail 'Refusing to 
 # 1. Source exists and is NOT already a junction?
 if (-not (Test-Path $src)) {
     Write-Host "Source not found: $src. Nothing to migrate." -ForegroundColor Yellow
-    exit 0
+    return
 }
 $srcItem = Get-Item $src -ErrorAction SilentlyContinue
 if ($srcItem -and ($srcItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -68,7 +68,7 @@ if ($srcItem -and ($srcItem.Attributes -band [IO.FileAttributes]::ReparsePoint))
     Write-Host "ALREADY MIGRATED: $src is a junction -> $tgt" -ForegroundColor Green
     $c = (Get-ChildItem $src -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
     Write-Host "Files readable through junction: $c" -ForegroundColor Green
-    exit 0
+    return
 }
 
 # 2. Measure source; check target drive free space
@@ -180,4 +180,4 @@ Write-Host "  use the bundled script:" -ForegroundColor Yellow
 Write-Host ("    powershell -ExecutionPolicy Bypass -File `"$PSScriptRoot\junction_rollback.ps1`" -SourceDir `"$src`"") -ForegroundColor Yellow
 Write-Host "  (it removes only the link, copies the data back, then verifies)" -ForegroundColor Yellow
 
-exit 0
+return
