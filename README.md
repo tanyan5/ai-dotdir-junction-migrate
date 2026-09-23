@@ -1,8 +1,10 @@
 # ai-dotdir-junction-migrate
 
-一个 Windows 专用的 **C 盘瘦身工具**：把各种 AI 编程工具（Cursor、Qoder、Trae、WebStorm、Codex、CodeGeeX、Tabnine、JetBrains 全家桶……）占用巨大的数据目录，通过 **NTFS junction（目录连接点）** 迁移到其它固定磁盘（如 D 盘），C 盘原路径依旧可用，工具无感。
+一个 **Windows 专用** 的 **C 盘瘦身工具**：把各种 AI 编程工具（Cursor、Qoder、Trae、WebStorm、Codex、CodeGeeX、Tabnine、JetBrains 全家桶……）占用巨大的数据目录，通过 **NTFS junction（目录连接点）** 迁移到其它固定磁盘（如 D 盘），C 盘原路径依旧可用，工具无感。
 
-> 这是一个 [WorkBuddy](https://www.workbuddy.cn) 技能（Skill）。安装后，直接用自然语言让 AI 助手帮你迁移即可，无需手动敲命令。
+> 本技能遵循开放的 **Agent Skills 标准**（一个文件夹 + `SKILL.md` + `scripts/`），因此在 **WorkBuddy、Cursor、Codex CLI、Claude Code、Gemini CLI、Qoder、Trae、Windsurf** 等支持该标准的工具里都能直接使用——装一次，多处可用。安装后只需用自然语言说出需求，AI 助手会自动加载本技能并运行脚本，无需手动敲命令。
+>
+> ⚠️ **仅限 Windows**（Windows 10/11 + NTFS）。脚本依赖 PowerShell 5.1、`robocopy` 和 NTFS junction，macOS / Linux 上无法运行。
 
 ---
 
@@ -22,10 +24,10 @@
 
 ## 安装
 
-把本仓库克隆/下载后，将整个文件夹放到 WorkBuddy 的用户技能目录：
+技能目录结构（一个文件夹 + `SKILL.md` + `scripts/`）：
 
 ```
-%USERPROFILE%\.workbuddy\skills\ai-dotdir-junction-migrate\
+ai-dotdir-junction-migrate\
 ├── SKILL.md
 ├── README.md
 └── scripts\
@@ -35,14 +37,40 @@
     └── migrate_all_ai_dirs.ps1            # 批量迁移封装器
 ```
 
-PowerShell 一键安装：
+### 方式一：通用安装（推荐，一次装好所有支持 Agent Skills 的工具）
+
+```powershell
+npx skills add tanyan5/ai-dotdir-junction-migrate -g
+```
+
+它会装到通用目录 `%USERPROFILE%\.agents\skills\`，**Cursor、Codex CLI、Claude Code、Gemini CLI、Qoder、Trae、Windsurf 等都会读取这个目录**，无需逐个安装。之后可用 `npx skills ls -g` 查看、`npx skills update` 更新。
+
+### 方式二：手动放入某个工具的技能目录
+
+克隆后把整个文件夹放进目标工具的技能目录即可（各工具只读自己那份）：
 
 ```powershell
 git clone https://github.com/tanyan5/ai-dotdir-junction-migrate.git `
   "$env:USERPROFILE\.workbuddy\skills\ai-dotdir-junction-migrate"
 ```
 
-装好后，直接对你的 WorkBuddy 说：「帮我把 Cursor 的数据迁到 D 盘」「把 .qoder-cn 软链到 D 盘」「列出我迁移过哪些目录」，助手会自动加载本技能并运行脚本。
+| 工具 | 技能目录 |
+|---|---|
+| 通用（被多数工具共享） | `%USERPROFILE%\.agents\skills\` |
+| WorkBuddy | `%USERPROFILE%\.workbuddy\skills\` |
+| Cursor | `%USERPROFILE%\.cursor\skills\` |
+| Codex CLI | `%USERPROFILE%\.codex\skills\` |
+| Claude Code | `%USERPROFILE%\.claude\skills\` |
+
+> Cursor / Codex 只在**启动时**扫描技能目录，装完记得重启对应工具。
+
+### 怎么用
+
+装好后直接用自然语言提出需求即可，AI 助手会自动加载本技能并运行脚本：
+
+> 「帮我把 Cursor 的数据迁到 D 盘」
+> 「把 .qoder-cn 软链到 D 盘」
+> 「列出我迁移过哪些目录」
 
 ---
 
