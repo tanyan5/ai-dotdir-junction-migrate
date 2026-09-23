@@ -120,7 +120,7 @@ function Get-OwnerInfo {
 if (-not $ScriptPath) { $ScriptPath = Join-Path $PSScriptRoot 'junction_migrate.ps1' }
 if (-not (Test-Path $ScriptPath)) {
     Write-Host "ERROR: generic script not found: $ScriptPath" -ForegroundColor Red
-    exit 1
+    throw 'ABORTED - see the ERROR line above.'
 }
 
 # 1. Abort if any owning app is still running (locked files -> copy fails)
@@ -133,14 +133,14 @@ foreach ($pr in $procNames) {
 }
 if ($running.Count -gt 0) {
     Write-Host "ERROR: these are still running, quit them first: $($running -join ', ')" -ForegroundColor Red
-    exit 1
+    throw 'ABORTED - see the ERROR line above.'
 }
 
 # Resolve the rollback script (default: next to this file)
 if (-not $RollbackScript) { $RollbackScript = Join-Path $PSScriptRoot 'junction_rollback.ps1' }
 if (-not (Test-Path $RollbackScript)) {
     Write-Host "ERROR: rollback script not found: $RollbackScript" -ForegroundColor Red
-    exit 1
+    throw 'ABORTED - see the ERROR line above.'
 }
 
 # Build the full candidate list with metadata (size, target, migrated-flag)
@@ -173,7 +173,7 @@ for ($i = 0; $i -lt $allItems.Count; $i++) { $allItems[$i].Index = $i + 1 }
 
 if ($allItems.Count -eq 0) {
     Write-Host "No candidate directories found. Nothing to do." -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 # --- selection helpers ---
@@ -256,8 +256,11 @@ function Invoke-Restore {
             continue
         }
         Write-Host ("`n=== Restoring $($s.Src) (junction -> real dir on original disk) ===") -ForegroundColor Cyan
-        & $RollbackScript -SourceDir $s.Src
-        if ($LASTEXITCODE -ne 0) { Write-Host ("  restore FAILED for $($s.Src)") -ForegroundColor Red }
+        try {
+            & $RollbackScript -SourceDir $s.Src
+        } catch {
+            Write-Host ("  restore FAILED for $($s.Src): {0}" -f $_.Exception.Message) -ForegroundColor Red
+        }
     }
 }
 
@@ -335,7 +338,7 @@ if ($All) {
     $selected = @(Resolve-Selection -Tokens $Items -List $allItems)
     if ($selected.Count -eq 0) {
         Write-Host "ERROR: no items matched your -Items selection. Aborting." -ForegroundColor Red
-        exit 1
+        throw 'ABORTED - see the ERROR line above.'
     }
     Write-Host ("Selected by -Items: {0} item(s)." -f $selected.Count) -ForegroundColor Cyan
 } else {
@@ -346,7 +349,7 @@ if ($All) {
 if ($Restore) {
     Write-Host "(-Restore) undoing migration for the selected item(s)..." -ForegroundColor Cyan
     Invoke-Restore -Selected $selected
-    exit 0
+    return
 }
 
 # 2. Check aggregate size of the SELECTED items vs target drive free space
@@ -354,12 +357,12 @@ $qual = Split-Path $TargetRoot -Qualifier
 $drive = New-Object System.IO.DriveInfo $qual
 if (-not $drive.IsReady) {
     Write-Host "ERROR: target drive $qual is not ready." -ForegroundColor Red
-    exit 1
+    throw 'ABORTED - see the ERROR line above.'
 }
 $total = ($selected | Measure-Object Size -Sum).Sum
 if ($drive.AvailableFreeSpace -lt $total) {
     Write-Host ("ERROR: target {0} has only {1:N2} GB free but {2:N2} GB needed for the selected items." -f $qual, ($drive.AvailableFreeSpace/1GB), ($total/1GB)) -ForegroundColor Red
-    exit 1
+    throw 'ABORTED - see the ERROR line above.'
 }
 
 Write-Host ("Target {0} free: {1:N2} GB | selected to migrate: {2:N2} GB" -f $qual, ($drive.AvailableFreeSpace/1GB), ($total/1GB)) -ForegroundColor Cyan
@@ -373,8 +376,13 @@ foreach ($p in $selected) {
 $ok = @(); $fail = @()
 foreach ($p in $selected) {
     Write-Host ("`n=== Migrating $($p.Src) -> $($p.Dst) ===") -ForegroundColor Cyan
-    & $ScriptPath -SourceDir $p.Src -TargetDir $p.Dst
-    if ($LASTEXITCODE -eq 0) { $ok += $p.Src } else { $fail += $p.Src }
+    try {
+        & $ScriptPath -SourceDir $p.Src -TargetDir $p.Dst
+        $ok += $p.Src
+    } catch {
+        Write-Host ("  FAILED: {0}" -f $_.Exception.Message) -ForegroundColor Red
+        $fail += $p.Src
+    }
 }
 
 # 4. Summary
@@ -385,4 +393,4 @@ Write-Host ("FAIL ({0}): {1}" -f $fail.Count, ($fail -join ', ')) -ForegroundCol
 if ($fail.Count -gt 0) {
     Write-Host "Re-run this script; already-completed dirs are skipped (idempotent)." -ForegroundColor Yellow
 }
-exit 0
+return
