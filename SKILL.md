@@ -210,3 +210,36 @@ Rules of thumb for choosing what to migrate:
 - The target disk MUST be fixed/internal (not a USB stick).
 - Always verify the app still works after migrating before deleting the junction.
 - The same "do not rmdir /s the junction" warning applies to every junction.
+
+## Shortcut: a short slash alias (e.g. `/mig`)
+Agents on the Agent Skills standard let you type `/` in chat and search skills by
+name, so `/ai-dotdir-junction-migrate` already invokes this skill. For a shorter
+trigger, add a tiny **alias skill**: a folder whose NAME is the shortcut, holding
+only a pointer back here.
+
+```markdown
+<!-- ~/.cursor/skills/mig/SKILL.md  — folder name == frontmatter `name` == the slash command -->
+---
+name: mig
+description: Shortcut alias for ai-dotdir-junction-migrate (Windows C: space reclaim via junctions).
+disable-model-invocation: true   # behaves like a slash command: never auto-loaded, costs no context
+---
+# /mig
+Read and follow the `ai-dotdir-junction-migrate` SKILL.md, then execute its
+scan -> pick -> migrate -> verify workflow. Never improvise from memory.
+```
+
+Rules that bite if ignored:
+- `name` MUST equal the parent folder name, and may contain only lowercase
+  letters, digits and hyphens — no Chinese, no underscores, no spaces.
+- `disable-model-invocation: true` is what makes it a pure command (only loads
+  when you type `/mig`); drop it and the alias competes for automatic matches.
+- Per-tool path for the alias file: Cursor `~/.cursor/skills/<alias>/SKILL.md`
+  (or `~/.agents/skills/<alias>/`), Claude Code `~/.claude/commands/<alias>.md`,
+  Codex CLI `~/.codex/prompts/<alias>.md`, Gemini CLI
+  `~/.gemini/commands/<alias>.toml`.
+- Do NOT place the same alias name in two directories the SAME tool scans
+  (e.g. `~/.cursor/skills/` and `~/.agents/skills/`) — you get two duplicate
+  entries in the `/` menu.
+- Cursor tips: `Alt+Enter` (Windows) on a `/`-selected skill turns it into a
+  sticky custom mode for the session; `/loop` can re-run a skill on an interval.
