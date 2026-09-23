@@ -32,9 +32,10 @@
 
 .ROLLBACK
     Never delete the junction with "rmdir /s" or "Remove-Item -Recurse" (that would
-    erase the real data on D:). To undo:
-      cmd /c rmdir "<C: globalStorage path>"     # removes only the link
-      Move-Item "<D: path>\*" "<C: globalStorage path>\"
+    erase the real data on D:). To undo, use the dedicated script:
+      powershell -ExecutionPolicy Bypass -File junction_rollback.ps1 -SourceDir "<C: globalStorage path>"
+    It removes only the link (non-recursive .NET delete), copies the data back to
+    C:, then verifies - so the data is never lost.
 #>
 
 param(
@@ -141,6 +142,6 @@ if ($final -ne $dN) {
 Write-Host "DONE. Start Cursor and confirm your chat history is intact." -ForegroundColor Green
 Write-Host ""
 Write-Host "IMPORTANT - do NOT delete this junction with 'rmdir /s' or 'Remove-Item -Recurse'" -ForegroundColor Yellow
-Write-Host "  (that would delete the real data on D:). To roll back:" -ForegroundColor Yellow
-Write-Host ("    cmd /c rmdir `"$src`"        # removes only the link" ) -ForegroundColor Yellow
-Write-Host ("    Move-Item `"$dst\*`" `"$src\`"   # restore onto C:") -ForegroundColor Yellow
+Write-Host "  (that would delete the real data on D:). To roll back safely, use:" -ForegroundColor Yellow
+Write-Host ("    powershell -ExecutionPolicy Bypass -File `"$PSScriptRoot\junction_rollback.ps1`" -SourceDir `"$src`"") -ForegroundColor Yellow
+Write-Host "  (removes only the link, copies the data back, then verifies)" -ForegroundColor Yellow
