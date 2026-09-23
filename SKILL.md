@@ -1,10 +1,23 @@
 ---
 name: ai-dotdir-junction-migrate
-description: "Migrate bulky AI-tool data directories (Cursor globalStorage, .qoder/.qoder-cn, .trae/.trae-cn, .tabnine, .WebStorm, .codex, .codegeex, .dsh, JetBrains caches, etc.) off the C: system drive to another fixed disk via NTFS junctions to reclaim C: space. Use when a user reports C: is nearly full and an AI IDE/tool is a large consumer, or asks to migrate/relocate/symlink/soft-link (junction) any AI-tool dot-dir to D: or another drive. Trigger keywords: Cursor, globalStorage, state.vscdb, qoder, trae, webstorm, codex, C盘满, 软连接, 迁移, junction, 释放C盘."
+description: "WINDOWS ONLY (NTFS). Migrate bulky AI-tool data directories (Cursor globalStorage, .qoder/.qoder-cn, .trae/.trae-cn, .tabnine, .WebStorm, .codex, .codegeex, .dsh, JetBrains caches, etc.) off the C: system drive to another fixed disk via NTFS junctions to reclaim C: space. Use when a user on Windows reports C: is nearly full and an AI IDE/tool is a large consumer, or asks to migrate/relocate/symlink/soft-link (junction) any AI-tool dot-dir to D: or another drive. Do NOT use on macOS/Linux: the bundled scripts are PowerShell + robocopy + NTFS junctions and cannot run there. Trigger keywords: Cursor, globalStorage, state.vscdb, qoder, trae, webstorm, codex, C盘满, 软连接, 迁移, junction, 释放C盘, Windows."
 agent_created: true
 ---
 
 # AI-Tool Dot-Dirs -> D: via NTFS Junction
+
+## Platform (read first)
+**Windows only (Windows 10/11, NTFS).** The bundled scripts are PowerShell 5.1 +
+`robocopy` + NTFS junctions — none of that exists on macOS/Linux, so on those
+platforms the skill may load but every script will fail. Do not trigger or offer
+this skill on macOS/Linux; instead tell the user it is Windows-only and that
+macOS needs a different approach (e.g. a real symlink / bind mount), which this
+skill does NOT cover.
+
+This skill follows the open **Agent Skills** standard (a folder with `SKILL.md` +
+`scripts/`), so the same copy works in WorkBuddy, Cursor, Codex CLI, Claude Code,
+Gemini CLI, Qoder, Trae, etc. — but the *runtime requirement* above still applies
+to all of them: Windows only.
 
 ## When to use
 - User reports the C: drive is running out of space and an AI coding tool (Cursor, Qoder, Trae, WebStorm, Codex, CodeGeeX, Tabnine, JetBrains, etc.) is a large consumer.
