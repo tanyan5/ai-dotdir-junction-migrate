@@ -72,6 +72,33 @@ git clone https://github.com/tanyan5/ai-dotdir-junction-migrate.git `
 > 「把 .qoder-cn 软链到 D 盘」
 > 「列出我迁移过哪些目录」
 
+### 斜杠快捷命令 `/dotdir-migrate`（可选）
+
+技能本身已经能用 `/` + 技能名调起——Cursor 的 `/` 菜单支持搜索，打 `mig` 也能筛到 `ai-dotdir-junction-migrate`。但如果你想要一条更短、含义明确的固定命令，可以额外放一个**别名技能**：Agent Skills 标准**没有 aliases 字段**，**文件夹名就是斜杠命令名**，所以别名必须是独立的一份。
+
+把下面这份内容存成 `%USERPROFILE%\.cursor\skills\dotdir-migrate\SKILL.md`（注意文件夹名必须和 `name` 完全一致）：
+
+```markdown
+---
+name: dotdir-migrate
+description: Shortcut alias for ai-dotdir-junction-migrate — migrate AI-tool dot-dirs off C: to another fixed disk via NTFS junctions (Windows only).
+disable-model-invocation: true
+---
+# /dotdir-migrate
+读取并遵循 `ai-dotdir-junction-migrate` 技能的 SKILL.md，按其
+扫描 → 勾选 → 迁移 → 校验 流程执行，不要凭记忆自行发挥。
+```
+
+要点：
+
+- `name` **必须**等于所在文件夹名，且只能用**小写字母、数字、连字符**（中文、下划线、空格都不行）。
+- `disable-model-invocation: true` 让它变成**纯斜杠命令**：不自动加载、不占用上下文，只有你打 `/dotdir-migrate` 时才注入。
+- 别名正文只写"指针"，**不要在别名里复制一遍实现**，否则两份内容迟早漂移。
+- 各工具的别名文件位置：Cursor `~/.cursor/skills/<别名>/SKILL.md`、Claude Code `~/.claude/commands/<别名>.md`、Codex CLI `~/.codex/prompts/<别名>.md`、Gemini CLI `~/.gemini/commands/<别名>.toml`。
+- ⚠️ 别把**同一个别名名**同时放进工具会扫描的两个目录（例如 `~/.cursor/skills/` 和 `~/.agents/skills/`），否则 `/` 菜单会出现两条重复项。
+- 别名是**本机用户级**配置，**不会**随 `npx skills add` 一起安装，换机器要单独建一次。
+- Cursor 小技巧：`/` 选中技能后按 `Alt+Enter`（Windows）可让它在整个会话常驻（custom mode）；`/loop` 可按间隔重复运行。
+
 ---
 
 ## 手动使用（可选）
