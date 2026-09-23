@@ -48,7 +48,7 @@ $dst = $TargetPath
 
 function Fail($m) {
     Write-Host "ERROR: $m" -ForegroundColor Red
-    exit 1
+    throw $m
 }
 
 # 0. Prereq: Cursor must be fully closed
@@ -60,7 +60,7 @@ if (Get-Process Cursor -ErrorAction SilentlyContinue) {
 if (-not (Test-Path $src)) {
     Write-Host "Source not found: $src" -ForegroundColor Yellow
     Write-Host "Nothing to migrate. Aborting." -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 # 2. Already a junction? -> idempotent, just report
@@ -71,7 +71,7 @@ if ($srcItem -and ($srcItem.Attributes -band [IO.FileAttributes]::ReparsePoint))
     Write-Host "ALREADY MIGRATED: $src is a junction -> $tgt" -ForegroundColor Green
     $c = (Get-ChildItem $src -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
     Write-Host "Files readable through junction: $c" -ForegroundColor Green
-    exit 0
+    return
 }
 
 # 3. Measure source; check target drive free space
