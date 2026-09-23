@@ -82,7 +82,7 @@ $ErrorActionPreference = 'Stop'
 
 function Fail($m) {
     Write-Host "ERROR: $m" -ForegroundColor Red
-    exit 1
+    throw $m
 }
 
 # Send a path to the Recycle Bin (silent, recoverable). Falls back to a permanent
@@ -145,7 +145,7 @@ if ($Scan) {
     $m = @(Find-Migrations)   # @() guards against unwrap on single result
     if ($m.Count -eq 0) {
         Write-Host "No cross-disk junction migrations found under: $env:USERPROFILE, $env:APPDATA, $env:LOCALAPPDATA" -ForegroundColor Yellow
-        exit 0
+        return
     }
     Write-Host "Junction migrations found:" -ForegroundColor Cyan
     for ($i = 0; $i -lt $m.Count; $i++) {
@@ -153,7 +153,7 @@ if ($Scan) {
         Write-Host ("       -> {0}" -f $m[$i].Target) -ForegroundColor DarkGray
     }
     Write-Host "To restore one:  junction_rollback.ps1 -SourceDir ""<its Source>""" -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 if (-not $SourceDir) { Fail 'Provide -SourceDir "<junction path>" to restore, or -Scan to list migrations.' }
@@ -164,7 +164,7 @@ $src = [System.IO.Path]::GetFullPath($SourceDir)
 # 1. Must be an actual junction. Never operate on a real directory.
 if (-not (Test-Path $src)) {
     Write-Host "Nothing to roll back: path not found: $src" -ForegroundColor Yellow
-    exit 0
+    return
 }
 $srcItem = Get-Item $src -ErrorAction SilentlyContinue
 if (-not ($srcItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -182,13 +182,13 @@ if (-not ($srcItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         if ($confirm -ne $src) { Fail 'Confirmation did not match the source path. Aborting - nothing changed.' }
         if (-not (Test-Path $TargetDir)) {
             Write-Host "Target not found: $TargetDir (nothing to delete)." -ForegroundColor Yellow
-            exit 0
+            return
         }
         Remove-ToRecycleBin $TargetDir
-        exit 0
+        return
     }
     Write-Host "NOT A JUNCTION: $src is a real directory. Nothing to roll back (or it was already restored)." -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 # 2. Resolve target (junction's own target if not provided)
@@ -258,4 +258,4 @@ if ($DeleteTarget) {
 }
 
 Write-Host "DONE. Start the application and confirm everything works from C:." -ForegroundColor Green
-exit 0
+return
