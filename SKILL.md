@@ -73,16 +73,23 @@ exits cleanly (idempotent).
 ## Safety notes (must tell the user)
 - After migration, NEVER delete the junction with `rmdir /s` or
   `Remove-Item -Recurse` — that would erase the REAL data on D:.
+- To remove a junction link safely in one line (pure PowerShell, no cmd.exe):
+  `[IO.Directory]::Delete("<junction path>", $false)` — non-recursive, so it
+  deletes only the reparse point and never descends into the target.
 - Rollback is a dedicated script (see below), NOT a manual command.
 - The scripts are pure ASCII (no Chinese in code) to avoid PowerShell 5.1 reading
   UTF-8-as-GBK parse errors.
+- No script depends on `cmd.exe`: junctions are created with
+  `New-Item -ItemType Junction` and removed with the non-recursive .NET delete
+  above. So the whole flow also works in environments where cmd is blocked.
 
 ## Rollback (undo a migration)
 Bundled script: `scripts/junction_rollback.ps1`. It is SAFE BY DESIGN:
 1. Refuses to run unless the source path is an actual junction (ReparsePoint) —
    it never touches a real directory.
-2. Removes ONLY the link with `cmd /c rmdir "<src>"` (no /s), which never deletes
-   the data on the other disk.
+2. Removes ONLY the link with a non-recursive .NET delete
+   (`[IO.Directory]::Delete($src, $false)`), which never descends into the target
+   and therefore never deletes the data on the other disk. No `cmd.exe` needed.
 3. Copies the data from the target BACK to the original path with robocopy (so the
    source is never lost), then verifies it is readable as a real directory.
 4. If `-DeleteTarget` is passed, the D: backup is wiped too; otherwise it is kept
