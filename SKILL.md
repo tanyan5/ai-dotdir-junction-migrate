@@ -68,7 +68,13 @@ powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/cursor_migrate_glo
 
 Any failure aborts WITHOUT deleting the C: source, so it is always safe to re-run.
 If the migration was already done, the script detects the existing junction and
-exits cleanly (idempotent).
+returns cleanly (idempotent).
+
+Error handling: the scripts never call `exit` — they `throw` instead. An `exit`
+inside a script invoked with `&` propagates to, and terminates, the CALLER (this
+used to kill agent-driven runs and lose all their output). `throw` is catchable,
+so wrap calls in `try/catch` when driving the scripts programmatically; running a
+script with `powershell -File` still yields exit code 1 on failure.
 
 ## Safety notes (must tell the user)
 - After migration, NEVER delete the junction with `rmdir /s` or
@@ -108,7 +114,7 @@ powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/junction_rollback.
 ```
 
 SAFETY: running rollback on an already-restored path does NOT touch the D: backup
-by itself - it prints "NOT A JUNCTION ... Nothing to roll back" and exits. The
+by itself - it prints "NOT A JUNCTION ... Nothing to roll back" and returns. The
 D: copy is only removed when you explicitly request `-DeleteTarget` AND the source
 is still a junction (normal undo), OR with `-DeleteTarget -TargetDir` on a restored
 path (leftover cleanup, with a type-to-confirm prompt).
