@@ -27,7 +27,9 @@ to all of them: Windows only.
 
 ## What it does
 The migration keeps Cursor working through its original path while the real data
-lives on another disk:
+lives on another disk. **Step 0 is always the running-app guard** (see below):
+if the owning application is alive, or its database is dirty, the script refuses
+to run — a live SQLite database copies as a torn snapshot.
 1. Copies `%APPDATA%\Cursor\User\globalStorage` to the target disk with `robocopy`
    (long-path + read-only safe).
 2. Verifies the copy is in sync with `robocopy /L` (list-only). Never verify by
@@ -48,9 +50,52 @@ the app on startup, so `junction_migrate.ps1` EXCLUDES `.port`, `.lock`, `.pid`,
 wipe, and retries the copy once after 3 s. If the app was not fully quit, other
 files may still be locked -> quit the app and re-run (idempotent).
 
+## Running-app guard (do not skip this)
+`junction_migrate.ps1` REFUSES to run while the owning application is alive.
+Three independent signals — any one aborts:
+
+1. **Owner process** — a process whose executable path or command line mentions
+   the source dir, or whose process name contains the app name derived from the
+   folder (`~/.workbuddy` -> `workbuddy` / `codebuddy`).
+2. **Live SQLite WAL/journal** — a `*-wal` / `*-shm` / `*-journal` modified within
+   the last 15 minutes means the database was NOT closed cleanly.
+3. **Handle lock** — the ~400 newest files are opened with `FileShare.None`; any
+   failure proves somebody is holding a handle.
+
+The guard runs **twice**: before the copy AND again before the wipe. The second
+run is what proves the snapshot is not torn, because the app may be started
+mid-copy.
+
+### Why "Verify OK" is not enough
+`robocopy /L` only proves "same size + timestamp at this instant". With a
+database being written concurrently the copy still verifies as in-sync yet is
+logically inconsistent — the WAL is not captured atomically.
+
+Real incident (2026-09): migrating `C:\Users\<u>\.workbuddy` while WorkBuddy was
+running. Two symptoms, one cause:
+- the /MIR wipe could not remove the locked source -> `Source dir still present`;
+- the copied `workbuddy.db` lost its `sessions` index, so the task/chat LIST went
+  empty on restart, while the real transcripts (`projects\*\*.jsonl`) were still
+  on disk and the index could be rebuilt from them.
+
+### If the script refuses, or reports wipe leftovers
+1. Quit the app **completely** — window, tray icon, helper/serve processes.
+2. Re-run the **exact same command**. It is resumable: the copy is refreshed, the
+   wipe and the junction are retried, and nothing has been deleted so far.
+3. **Never** hand-delete the source directory to "help it along" — one typo in a
+   `Remove-Item` path destroys real data. Use `junction_rollback.ps1` instead.
+
+### You cannot migrate the running agent's own data dir
+If the directory that needs migrating belongs to the very app hosting the agent
+(e.g. migrating `~/.workbuddy` while chatting inside WorkBuddy), the guard can
+never pass from the inside. Quit that app and run the migration from another tool
+or a plain terminal. `-AllowRunningApp` overrides the guard — only use it when
+you know the tree is idle (no database, no open handles).
+
 ## Prerequisites
-- Fully quit Cursor, including the tray icon. The script aborts if a Cursor
-  process is still running.
+- Fully quit the **owning application**, including its tray icon and helper/serve
+  processes. The scripts detect a running owner (process / live SQLite WAL /
+  locked handles) and refuse; `-AllowRunningApp` overrides that guard.
 - The target disk MUST be a FIXED internal disk (not a USB stick / removable
   drive). A junction on removable media breaks when unplugged.
 
@@ -77,6 +122,10 @@ so wrap calls in `try/catch` when driving the scripts programmatically; running 
 script with `powershell -File` still yields exit code 1 on failure.
 
 ## Safety notes (must tell the user)
+- Migrate only with the owning app **fully quit**, and never while the app is
+  writing a database (see *Running-app guard* — a torn DB copy loses indexes).
+- NEVER hand-delete a source directory to finish an interrupted migration; re-run
+  the script (resumable) or use `junction_rollback.ps1`.
 - After migration, NEVER delete the junction with `rmdir /s` or
   `Remove-Item -Recurse` — that would erase the REAL data on D:.
 - To remove a junction link safely in one line (pure PowerShell, no cmd.exe):
