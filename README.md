@@ -46,7 +46,13 @@ npx skills add tanyan5/ai-dotdir-junction-migrate -g
 
 它会装到通用目录 `%USERPROFILE%\.agents\skills\`，**Cursor、Codex CLI、Claude Code、Gemini CLI、Qoder、Trae、Windsurf 等都会读取这个目录**，无需逐个安装。之后可用 `npx skills ls -g` 查看、`npx skills update` 更新。
 
-### 方式二：手动放入某个工具的技能目录
+### 方式二：一句话
+
+```
+请将公开仓库 https://github.com/tanyan5/ai-dotdir-junction-migrate 下载并安装为本地Skill。
+```
+
+### 方式三：手动放入某个工具的技能目录
 
 克隆后把整个文件夹放进目标工具的技能目录即可（各工具只读自己那份）：
 
